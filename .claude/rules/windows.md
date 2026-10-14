@@ -77,6 +77,7 @@ session drag are out of scope.
 - Quit uses `applicationShouldTerminate` and a warning alert with host-free `openCounts` and
   `QuitPrompt.message`, which takes the launch decision's active restore mode:
   Live drops the shell clause and promises no reattachment.
+  The window-close sheet follows the same rule through `QuitPrompt.windowCloseMessage`.
   Skip it for system shutdown/restart/logout, no open windows, XCUITest, or an unwired library during
   the first roughly four seconds. The system-quit half is host-free in
   `QuitReason.isSystemQuit` and covered by `QuitReasonTests`.
