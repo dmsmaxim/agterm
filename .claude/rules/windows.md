@@ -77,7 +77,6 @@ session drag are out of scope.
 - Quit uses `applicationShouldTerminate` and a warning alert with host-free `openCounts` and
   `QuitPrompt.message`, which takes the launch decision's active restore mode:
   Live drops the shell clause and promises no reattachment.
-  The window-close sheet follows the same rule through `QuitPrompt.windowCloseMessage`.
   Skip it for system shutdown/restart/logout, no open windows, XCUITest, or an unwired library during
   the first roughly four seconds. The system-quit half is host-free in
   `QuitReason.isSystemQuit` and covered by `QuitReasonTests`.
@@ -86,6 +85,7 @@ session drag are out of scope.
   The reason is an attribute, not a param, despite `AERegistry.h` calling it a parameter: loginwindow
   writes it with `AEPutAttributePtr`. Never switch that read to `paramDescriptor`.
   The GUI-only prompt is keep-in-sync exempt and manually verified.
+- The window-close sheet takes its text from `QuitPrompt.windowCloseMessage` under the same mode rule.
 - A confirmed Live sessions reset (`LiveResetCoordinator.pending`) skips the quit alert, since its own
   dialog or `zmx.reset --force` was the confirmation. `AppDelegate.exitFlush` fixes the order: capture,
   finalize pending closes, then the CHECKED save; only a fully saved snapshot arms the marker and the
