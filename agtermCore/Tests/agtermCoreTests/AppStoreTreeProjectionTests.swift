@@ -465,6 +465,27 @@ struct AppStoreTreeProjectionTests {
         #expect(node.statusShape == nil)
     }
 
+    @Test func controlTreeReportsStatusIconWhileActive() throws {
+        let store = makeStore()
+        let ws = store.addWorkspace(name: "work")
+        let session = try #require(store.addSession(toWorkspace: ws.id, cwd: "/repo"))
+        store.setAgentIndicator(AgentIndicator(status: .active, icon: "/icons/agent.png"), forSession: session.id)
+
+        #expect(store.controlTree().workspaces[0].sessions[0].statusIcon == "/icons/agent.png")
+    }
+
+    @Test func controlTreeReportsStatusIconWhileIdle() throws {
+        let store = makeStore()
+        let ws = store.addWorkspace(name: "work")
+        let session = try #require(store.addSession(toWorkspace: ws.id, cwd: "/repo"))
+        store.setAgentIndicator(AgentIndicator(status: .idle, icon: "/icons/agent.png"), forSession: session.id)
+
+        let node = try #require(store.controlTree().workspaces[0].sessions.first)
+
+        #expect(node.status == nil)
+        #expect(node.statusIcon == "/icons/agent.png")
+    }
+
     @Test func controlTreeUsesForegroundLookups() throws {
         let store = makeStore()
         let ws = store.addWorkspace(name: "work")

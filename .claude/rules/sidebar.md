@@ -117,6 +117,10 @@ paths:
   cloud would read as a flag; the focused-workspace icon distinguishes itself the same way.
   The split axis is not distinguished — no cloud symbol carries both arrangements. The title bar draws
   the same `cloud` beside the host, gated by `InterfaceElement.remoteHost`.
+- A sticky `session.status --icon` replaces only the plain `terminal` glyph, idle rows included, as a template
+  `setColors` tints. `AppStore.drawsPlainTerminalGlyph` keeps the split, flagged and remote glyphs, which carry
+  state nothing else shows. `StatusIconImage` caches the decode by path and modification date, and
+  `RowContent.indicator` carries the path.
   See [[control-api]].
 
 ## Workspace focus

@@ -97,6 +97,32 @@ final class SidebarCellView: NSTableCellView {
     }
 }
 
+/// The image a `session.status --icon` path names, as a template so the row tints it like the terminal glyph
+/// it replaces. Decoded once per path and modification date; nil for a file the system cannot decode, which
+/// leaves the row its terminal glyph.
+@MainActor
+enum StatusIconImage {
+    /// The row icon view's fixed box. An em-sized SVG reports a 1x1 size, so every image is fitted to it here.
+    private static let slot: CGFloat = 16
+    private static var cache: [String: (modified: Date, image: NSImage?)] = [:]
+
+    static func image(atPath path: String) -> NSImage? {
+        guard let modified = try? FileManager.default.attributesOfItem(atPath: path)[.modificationDate] as? Date else {
+            return nil
+        }
+        if let hit = cache[path], hit.modified == modified { return hit.image }
+        let image = NSImage(contentsOfFile: path).flatMap { $0.size.width > 0 && $0.size.height > 0 ? $0 : nil }
+        if let image {
+            let scale = slot / max(image.size.width, image.size.height)
+            image.size = NSSize(width: image.size.width * scale, height: image.size.height * scale)
+        }
+        image?.isTemplate = true
+        image?.accessibilityDescription = URL(fileURLWithPath: path).deletingPathExtension().lastPathComponent
+        cache[path] = (modified, image)
+        return image
+    }
+}
+
 /// A small filled accent capsule showing an unseen-notification count, custom-drawn (not an `NSTextField`) so
 /// capsule and text center cleanly at row size. A single digit reads as a circle (min width = height). Exposed
 /// to accessibility as a `notify-badge` static text.

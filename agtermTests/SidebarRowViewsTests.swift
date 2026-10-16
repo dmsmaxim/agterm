@@ -3,8 +3,8 @@ import XCTest
 @testable import agterm
 import agtermCore
 
-/// Hosted coverage for the sidebar row's name tooltip: it appears only while the label is too narrow to
-/// show the whole name, and clears again once the name fits.
+/// Hosted coverage for the sidebar row's name tooltip, which appears only while the label is too narrow to
+/// show the whole name, and for the leading icon each kind of row draws.
 @MainActor
 final class SidebarRowViewsTests: XCTestCase {
     private var stateDir: URL!
@@ -134,6 +134,93 @@ final class SidebarRowViewsTests: XCTestCase {
 
         XCTAssertEqual(try renderedIcon(forSession: remote.id), coordinator.remoteSessionIcon,
                        "on a remote row the weight carries split, so flagging must not claim it")
+    }
+
+    func testAStatusIconReplacesThePlainTerminalGlyphUntilTheIndicatorClears() throws {
+        let store = try XCTUnwrap(library.activeStore)
+        let session = try XCTUnwrap(store.activeSession)
+        let path = try writeIcon(named: "agent.png")
+        store.setAgentIndicator(AgentIndicator(status: .active, icon: path), forSession: session.id)
+        buildSidebar(for: store)
+
+        let icon = try XCTUnwrap(try renderedIcon(forSession: session.id))
+        XCTAssertTrue(icon.isTemplate, "the row tints the icon like the glyph it replaces")
+        XCTAssertEqual(icon.accessibilityDescription, "agent")
+
+        store.setAgentIndicator(AgentIndicator(), forSession: session.id)
+        coordinator.reconcile()
+        XCTAssertEqual(try renderedIcon(forSession: session.id), coordinator.sessionIcon)
+    }
+
+    func testAStatusIconStaysThroughAnAutomaticClear() throws {
+        let store = try XCTUnwrap(library.activeStore)
+        let session = try XCTUnwrap(store.activeSession)
+        let other = try XCTUnwrap(store.addSession(toWorkspace: store.workspaces[0].id, cwd: "/tmp"))
+        store.selectSession(other.id)
+        let path = try writeIcon(named: "agent.png")
+        store.setAgentIndicator(AgentIndicator(status: .completed, autoReset: true, icon: path), forSession: session.id)
+        buildSidebar(for: store)
+
+        store.selectSession(session.id)
+        coordinator.reconcile()
+
+        XCTAssertEqual(session.agentIndicator.status, .idle, "the visit must have run the auto-reset")
+        XCTAssertNotEqual(try renderedIcon(forSession: session.id), coordinator.sessionIcon,
+                          "an idle agent waiting for input keeps its logo")
+    }
+
+    func testAnEmSizedSVGIconFillsTheSlot() throws {
+        let store = try XCTUnwrap(library.activeStore)
+        let session = try XCTUnwrap(store.activeSession)
+        try FileManager.default.createDirectory(at: stateDir, withIntermediateDirectories: true)
+        let url = stateDir.appendingPathComponent("agent.svg")
+        let svg = #"<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24">"#
+            + #"<rect x="4" y="4" width="16" height="16"/></svg>"#
+        try Data(svg.utf8).write(to: url)
+        store.setAgentIndicator(AgentIndicator(status: .active, icon: url.path), forSession: session.id)
+        buildSidebar(for: store)
+
+        let icon = try XCTUnwrap(try renderedIcon(forSession: session.id))
+        XCTAssertNotEqual(icon, coordinator.sessionIcon)
+        XCTAssertEqual(icon.size, NSSize(width: 16, height: 16), "an em-sized SVG reports 1x1 until fitted to the slot")
+        let rep = try XCTUnwrap(NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 16, pixelsHigh: 16, bitsPerSample: 8,
+                                                 samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+                                                 colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0))
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+        icon.draw(in: NSRect(x: 0, y: 0, width: 16, height: 16))
+        NSGraphicsContext.restoreGraphicsState()
+        XCTAssertGreaterThan(rep.colorAt(x: 8, y: 8)?.alphaComponent ?? 0, 0.5, "the drawn icon must not be blank")
+    }
+
+    func testASplitRowKeepsItsGlyphOverAStatusIcon() throws {
+        let store = try XCTUnwrap(library.activeStore)
+        let session = try XCTUnwrap(store.activeSession)
+        store.toggleSplit(session.id)
+        store.setAgentIndicator(AgentIndicator(status: .active, icon: try writeIcon(named: "agent.png")), forSession: session.id)
+        buildSidebar(for: store)
+
+        XCTAssertEqual(try renderedIcon(forSession: session.id), coordinator.splitSessionIcon)
+    }
+
+    func testAMissingStatusIconFallsBackToTheTerminalGlyph() throws {
+        let store = try XCTUnwrap(library.activeStore)
+        let session = try XCTUnwrap(store.activeSession)
+        let missing = stateDir.appendingPathComponent("missing.png").path
+        store.setAgentIndicator(AgentIndicator(status: .active, icon: missing), forSession: session.id)
+        buildSidebar(for: store)
+
+        XCTAssertEqual(try renderedIcon(forSession: session.id), coordinator.sessionIcon)
+    }
+
+    func testAStatusIconIsDecodedAgainOnlyWhenTheFileChanges() throws {
+        let path = try writeIcon(named: "cached.png")
+        let first = try XCTUnwrap(StatusIconImage.image(atPath: path))
+        XCTAssertTrue(first === StatusIconImage.image(atPath: path), "an unchanged file must not be decoded again")
+
+        try FileManager.default.setAttributes([.modificationDate: Date(timeIntervalSinceNow: 60)], ofItemAtPath: path)
+
+        XCTAssertFalse(first === StatusIconImage.image(atPath: path), "a rewritten file must be decoded again")
     }
 
     func testFlaggedRenameRestoresTheLabelAfterAnUnchangedCustomName() async throws {
@@ -291,6 +378,16 @@ final class SidebarRowViewsTests: XCTestCase {
             return node.kind == .session && node.id == id
         }, "the session row should be visible in the outline")
         return try XCTUnwrap(outline.view(atColumn: 0, row: row, makeIfNecessary: true) as? SidebarCellView)
+    }
+
+    private func writeIcon(named name: String) throws -> String {
+        let rep = try XCTUnwrap(NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 8, pixelsHigh: 8, bitsPerSample: 8,
+                                                 samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+                                                 colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0))
+        try FileManager.default.createDirectory(at: stateDir, withIntermediateDirectories: true)
+        let url = stateDir.appendingPathComponent(name)
+        try XCTUnwrap(rep.representation(using: .png, properties: [:])).write(to: url)
+        return url.path
     }
 
     private func renderedIcon(forSession id: UUID) throws -> NSImage? {

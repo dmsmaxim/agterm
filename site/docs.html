@@ -3355,10 +3355,13 @@ for (const ws of tree.workspaces) for (const s of ws.sessions) {
               <span style="font-family: &quot;JetBrains Mono&quot;, monospace; color: #cbc6bc">diamond</span>,
               <span style="font-family: &quot;JetBrains Mono&quot;, monospace; color: #cbc6bc">capsule</span>, or
               <span style="font-family: &quot;JetBrains Mono&quot;, monospace; color: #cbc6bc">star</span>) overrides the silhouette
-              the same way, reverting to the configured shape on the next status set without it. Both read back on
+              the same way, reverting to the configured shape on the next status set without it.
+              <span style="font-family: &quot;JetBrains Mono&quot;, monospace; color: #cbc6bc">--icon</span> replaces the session's terminal glyph in the sidebar with the agent's logo and stays until
+              <span style="font-family: &quot;JetBrains Mono&quot;, monospace; color: #cbc6bc">--icon none</span>, so a hook sets it once when the agent starts. They read back on
               <span style="font-family: &quot;JetBrains Mono&quot;, monospace; color: #cbc6bc">tree</span> as the session's
-              <span style="font-family: &quot;JetBrains Mono&quot;, monospace; color: #cbc6bc">statusColor</span> and
-              <span style="font-family: &quot;JetBrains Mono&quot;, monospace; color: #cbc6bc">statusShape</span>, each reporting
+              <span style="font-family: &quot;JetBrains Mono&quot;, monospace; color: #cbc6bc">statusColor</span>,
+              <span style="font-family: &quot;JetBrains Mono&quot;, monospace; color: #cbc6bc">statusShape</span> and
+              <span style="font-family: &quot;JetBrains Mono&quot;, monospace; color: #cbc6bc">statusIcon</span>, each reporting
               the per-call override only. Every accepted status set, including idle, also stamps the session's
               <span style="font-family: &quot;JetBrains Mono&quot;, monospace; color: #cbc6bc">statusChangedAt</span> (epoch seconds,
               omitted before any set), including a call that re-pushes the same status — so a script polling

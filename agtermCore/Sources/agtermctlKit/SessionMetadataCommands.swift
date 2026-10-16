@@ -25,6 +25,11 @@ extension Session {
             """)
         var shape: String?
         @Option(name: .long, help: """
+            Replace the session's terminal glyph in the sidebar with this image (PNG, JPEG, PDF or SVG); later \
+            status sets keep it until --icon none.
+            """)
+        var icon: String?
+        @Option(name: .long, help: """
             Which pane set this status: primary/left/top, split/right/bottom, or scratch. Records the blocked \
             pane so navigation reaches it. Defaults to primary.
             """)
@@ -38,12 +43,20 @@ extension Session {
         @OptionGroup var target: TargetOptions
         @OptionGroup var options: ClientOptions
 
+        /// The icon as sent: a path resolved against this process's directory, `none` untouched.
+        private var sentIcon: String? {
+            icon.map { $0 == StatusIconChange.noneName ? $0 : Session.Overlay.absolutePath($0) }
+        }
+
         func validate() throws {
             if let color, !WatermarkConfig.isValidColorHex(color) {
                 throw ValidationError("color must be a #rrggbb hex value")
             }
             if let shape, StatusShape(rawValue: shape) == nil {
                 throw ValidationError("shape must be one of: \(StatusShape.validNamesPhrase)")
+            }
+            if StatusIconChange(sentIcon) == nil {
+                throw ValidationError("icon must be \(StatusIconChange.noneName) or a \(AgentIndicator.iconTypesPhrase) path without control characters")
             }
             try validatePaneArgument(pane)
         }
@@ -53,7 +66,8 @@ extension Session {
                            args: options.withWindow(ControlArgs(pane: pane, paneID: paneID, status: state,
                                                                  blink: blink ? true : nil,
                                                                  autoReset: autoReset ? true : nil, sound: sound,
-                                                                 color: color, shape: shape)))
+                                                                 color: color, shape: shape,
+                                                                 icon: sentIcon)))
         }
     }
 

@@ -267,6 +267,45 @@ struct AgentStatusTests {
         #expect(AgentIndicator(status: .blocked).shape == nil)
     }
 
+    @Test(arguments: ["/icons/agent.png", "/icons/logo.JPG", "/icons/mark.jpeg", "/icons/agent.pdf", "/icons/agent.svg"])
+    func iconPathAcceptsAnAbsoluteImagePath(_ path: String) {
+        #expect(AgentIndicator.isValidIconPath(path))
+    }
+
+    @Test(arguments: ["", "icons/agent.png", "/icons/agent.gif", "/icons/agent", "/icons.png/agent",
+                      "/icons/age\nnt.png"])
+    func iconPathRejectsARelativeUnsupportedOrControlCharacterPath(_ path: String) {
+        #expect(!AgentIndicator.isValidIconPath(path))
+    }
+
+    @Test func iconChangeParsesKeepNoneAndAPath() {
+        #expect(StatusIconChange(nil) == .keep)
+        #expect(StatusIconChange("none") == .clear)
+        #expect(StatusIconChange("/icons/agent.png") == .set("/icons/agent.png"))
+        #expect(StatusIconChange("") == nil)
+        #expect(StatusIconChange("agent.png") == nil)
+    }
+
+    @Test func iconChangeKeepsReplacesOrClearsTheCurrentIcon() {
+        #expect(StatusIconChange.keep.applied(to: "/icons/a.png") == "/icons/a.png")
+        #expect(StatusIconChange.set("/icons/b.png").applied(to: "/icons/a.png") == "/icons/b.png")
+        #expect(StatusIconChange.clear.applied(to: "/icons/a.png") == nil)
+    }
+
+    @Test func clearedKeepsOnlyTheIcon() {
+        let indicator = AgentIndicator(status: .blocked, blink: true, autoReset: true, color: "#ff0000", shape: .star,
+                                       icon: "/icons/agent.png", statusPane: .right)
+        #expect(indicator.cleared == AgentIndicator(icon: "/icons/agent.png"))
+        #expect(AgentIndicator(status: .active).cleared == AgentIndicator())
+    }
+
+    @Test func iconNoteNamesWhyTheRowWillNotDrawTheIcon() {
+        #expect(AgentIndicator.iconNote(decodes: true, plainRow: true) == nil)
+        #expect(AgentIndicator.iconNote(decodes: false, plainRow: true) == "icon not shown: the file is missing or is not an image")
+        #expect(AgentIndicator.iconNote(decodes: true, plainRow: false)
+            == "icon not shown while the row draws its split, flagged or remote glyph")
+    }
+
     @Test func tooltipTextNamesVisibleStatusesAndOmitsIdle() {
         #expect(AgentStatus.active.tooltipText == "Agent status: Active")
         #expect(AgentStatus.blocked.tooltipText == "Agent status: Blocked")

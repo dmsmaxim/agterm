@@ -157,6 +157,56 @@ final class ControlServerStatusSoundTests: XCTestCase {
         await fulfillment(of: [sound.log.playCalled], timeout: 2)
     }
 
+    func testAnIconReachesTheIndicatorAndTheTreeAndAnUndrawnOneIsNamed() async throws {
+        makeServer(resolvedSound: sound)
+        let store = try XCTUnwrap(library.activeStore)
+        let session = try XCTUnwrap(store.activeSession)
+        let dispatcher = ControlDispatcher(actions: server)
+        let missing = stateDir.appendingPathComponent("missing.png").path
+
+        let set = await dispatcher.dispatch(ControlRequest(cmd: .sessionStatus, target: session.id.uuidString,
+                                                           args: ControlArgs(status: "active", icon: missing)))
+
+        XCTAssertEqual(set?.ok, true)
+        XCTAssertEqual(set?.result?.text, "icon not shown: the file is missing or is not an image")
+        XCTAssertEqual(session.agentIndicator.icon, missing)
+        XCTAssertEqual(server.buildTree(in: store).workspaces.flatMap(\.sessions).first { $0.id == session.id.uuidString }?.statusIcon,
+                       missing)
+
+        let refused = await dispatcher.dispatch(ControlRequest(cmd: .sessionStatus, target: session.id.uuidString,
+                                                               args: ControlArgs(status: "blocked", icon: "agent.png")))
+        XCTAssertEqual(refused?.ok, false)
+        XCTAssertEqual(session.agentIndicator, AgentIndicator(status: .active, icon: missing))
+    }
+
+    func testAStatusWithoutAnIconKeepsItAndNoneClearsIt() async throws {
+        makeServer(resolvedSound: sound)
+        let session = try XCTUnwrap(library.activeStore?.activeSession)
+        let dispatcher = ControlDispatcher(actions: server)
+        let target = session.id.uuidString
+        _ = await dispatcher.dispatch(ControlRequest(cmd: .sessionStatus, target: target,
+                                                     args: ControlArgs(status: "active", icon: "/icons/agent.png")))
+
+        let kept = await dispatcher.dispatch(ControlRequest(cmd: .sessionStatus, target: target,
+                                                            args: ControlArgs(status: "blocked", blink: true)))
+        XCTAssertEqual(kept?.result?.text, nil, "a kept icon was already reported when it was set")
+        XCTAssertEqual(session.agentIndicator, AgentIndicator(status: .blocked, blink: true, icon: "/icons/agent.png"))
+
+        _ = await dispatcher.dispatch(ControlRequest(cmd: .sessionStatus, target: target,
+                                                     args: ControlArgs(status: "idle", icon: "none")))
+        XCTAssertNil(session.agentIndicator.icon)
+    }
+
+    func testClearStatusDropsTheIcon() throws {
+        let store = try XCTUnwrap(library.activeStore)
+        let session = try XCTUnwrap(store.activeSession)
+        store.setAgentIndicator(AgentIndicator(status: .active, icon: "/icons/agent.png"), forSession: session.id)
+
+        AppActions(library: library).clearActiveSessionStatus()
+
+        XCTAssertEqual(session.agentIndicator, AgentIndicator())
+    }
+
     private func makeServer(resolvedSound: NSSound?) {
         let gate = StatusSoundResolutionGate(sound: resolvedSound)
         self.gate = gate

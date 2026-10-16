@@ -515,6 +515,7 @@
                 <span style="font-family: &quot;JetBrains Mono&quot;, monospace">statusBlink</span>,
                 <span style="font-family: &quot;JetBrains Mono&quot;, monospace">statusColor</span>,
                 <span style="font-family: &quot;JetBrains Mono&quot;, monospace">statusShape</span>,
+                <span style="font-family: &quot;JetBrains Mono&quot;, monospace">statusIcon</span>,
                 <span style="font-family: &quot;JetBrains Mono&quot;, monospace">statusChangedAt</span> (when the status was last set,
                 in epoch seconds on the same clock as an event's
                 <span style="font-family: &quot;JetBrains Mono&quot;, monospace">ts</span>; omitted before any set, refreshed by every set
@@ -1472,7 +1473,7 @@
             <div style="background: #22272b; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 11px; padding: 18px 20px; margin-bottom: 12px">
               <div style="font-family: &quot;JetBrains Mono&quot;, monospace; font-size: 13.5px; color: #6d82f3; line-height: 1.6; word-break: break-word">
                 agtermctl session status &lt;idle|active|completed|blocked&gt; [--blink] [--auto-reset] [--sound NAME] [--color #rrggbb]
-                [--shape SHAPE] [--pane left|right|scratch] [--pane-id TOKEN] [--target T] [--window W]
+                [--shape SHAPE] [--icon PATH|none] [--pane left|right|scratch] [--pane-id TOKEN] [--target T] [--window W]
               </div>
               <div style="font-family: &quot;JetBrains Mono&quot;, monospace; font-size: 11.5px; color: #6b727a; margin-top: 6px">session.status</div>
               <p style="font-size: 15px; line-height: 1.65; color: #cbc6bc; margin: 10px 0 0">
@@ -1504,6 +1505,10 @@
                 <span style="font-family: &quot;JetBrains Mono&quot;, monospace">capsule</span>,
                 <span style="font-family: &quot;JetBrains Mono&quot;, monospace">star</span>) overrides the glyph silhouette the same
                 way, falling back to the Settings shape for that state; an unknown name errors and leaves the status unchanged.
+                <span style="font-family: &quot;JetBrains Mono&quot;, monospace">--icon PATH</span> (PNG, JPEG, PDF or SVG, relative to the caller's directory) replaces the session's
+                terminal glyph in the sidebar, tinted like it. It is sticky: later status sets without it keep it, and only
+                <span style="font-family: &quot;JetBrains Mono&quot;, monospace">--icon none</span>, Clear Status or the pane closing drop it. Split, flagged and remote
+                rows keep their own glyph; when the row will not draw the icon the reply says why.
               </p>
               <p style="font-size: 13.5px; line-height: 1.6; color: #949ba4; margin: 8px 0 0">
                 <span style="font-family: &quot;JetBrains Mono&quot;, monospace">--pane</span> (default
@@ -1524,8 +1529,9 @@
                 keystrokes clear the block like typed ones. Read back as the session node's
                 <span style="font-family: &quot;JetBrains Mono&quot;, monospace">statusPane</span>,
                 <span style="font-family: &quot;JetBrains Mono&quot;, monospace">statusBlink</span>,
-                <span style="font-family: &quot;JetBrains Mono&quot;, monospace">statusColor</span>, and
-                <span style="font-family: &quot;JetBrains Mono&quot;, monospace">statusShape</span> (the last two reporting the
+                <span style="font-family: &quot;JetBrains Mono&quot;, monospace">statusColor</span>,
+                <span style="font-family: &quot;JetBrains Mono&quot;, monospace">statusShape</span> and
+                <span style="font-family: &quot;JetBrains Mono&quot;, monospace">statusIcon</span> (the last three reporting the
                 per-call override only), and
                 <span style="font-family: &quot;JetBrains Mono&quot;, monospace">statusChangedAt</span> — every accepted call stamps it,
                 including idle and one that re-pushes the same status, so a poller reads the last set time

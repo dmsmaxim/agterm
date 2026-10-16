@@ -318,6 +318,15 @@ struct AppStoreTests {
         #expect(a.agentIndicator == AgentIndicator())
     }
 
+    @Test func selectSessionResetsAnAutoResetIndicatorButKeepsItsIcon() {
+        let store = makeStore()
+        let ws = store.addWorkspace(name: "work")
+        let a = store.addSession(toWorkspace: ws.id, cwd: "/a")!
+        store.setAgentIndicator(AgentIndicator(status: .completed, autoReset: true, icon: "/icons/agent.png"), forSession: a.id)
+        store.selectSession(a.id)
+        #expect(a.agentIndicator == AgentIndicator(icon: "/icons/agent.png"))
+    }
+
     @Test func selectSessionDoesNotResetUnrelatedAutoResetIndicator() {
         let store = makeStore()
         let ws = store.addWorkspace(name: "work")

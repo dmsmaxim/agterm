@@ -66,7 +66,8 @@ extension WorkspaceSidebar.Coordinator {
             field.setAccessibilityLabel(nil)
             let session = store.session(withID: node.id)
             applyBadge(toCell: cell, count: effectiveUnseen(session?.unseenCount ?? 0))
-            cell.statusIcon.apply(effectiveIndicator(forSession: node.id))
+            let indicator = effectiveIndicator(forSession: node.id)
+            cell.statusIcon.apply(indicator)
             // the split-rectangle icon (matching the toolbar split button) shows in BOTH modes so a split
             // stays distinguishable at a glance, and `hasSplit` keeps it while merely hidden. Only the
             // filled `flagged` variant is tree-mode only — every row in the flat flagged view is flagged,
@@ -74,9 +75,12 @@ extension WorkspaceSidebar.Coordinator {
             let showSplitIcon = session?.hasSplit == true
             let flagged = store.sidebarMode == .tree && session?.flagged == true
             let notice = session.flatMap(presentationNotice(for:))
-            cell.imageView?.image = iconForSession(split: showSplitIcon, axis: session?.splitAxis ?? .leftRight,
-                                                   flagged: flagged, remote: session?.remoteHost != nil,
-                                                   disconnected: notice != nil)
+            let glyph = iconForSession(split: showSplitIcon, axis: session?.splitAxis ?? .leftRight,
+                                       flagged: flagged, remote: session?.remoteHost != nil,
+                                       disconnected: notice != nil)
+            let statusIcon = session.map(store.drawsPlainTerminalGlyph) == true
+                ? indicator.icon.flatMap { StatusIconImage.image(atPath: $0) } : nil
+            cell.imageView?.image = statusIcon ?? glyph
             cell.imageView?.toolTip = notice
             cell.imageView?.setAccessibilityIdentifier("session-icon")
         }

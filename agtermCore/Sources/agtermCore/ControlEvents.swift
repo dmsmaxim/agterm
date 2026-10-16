@@ -26,8 +26,10 @@ public struct ControlEventPayload: Codable, Sendable, Equatable {
     /// The `status` event's per-call glyph silhouette (a `StatusShape` raw value), nil when the glyph uses the
     /// Settings shape / default plain circle. A shape-only change emits a `status` event, unexplainable without it.
     public var shape: String?
+    /// The `status` event's per-call row icon path, nil when the row keeps its own glyph.
+    public var icon: String?
     /// previous is what the event replaced. On `status` it is the status before the accepted write, equal
-    /// to `status` when only shape, color, pane or blink changed. On `session.selected` it is the id of
+    /// to `status` when only shape, icon, color, pane or blink changed. On `session.selected` it is the id of
     /// the session that lost the selection, nil when there was none.
     public var previous: String?
     public var title: String?
@@ -37,7 +39,7 @@ public struct ControlEventPayload: Codable, Sendable, Equatable {
     public var host: String?
 
     public init(name: String? = nil, status: String? = nil, pane: String? = nil,
-                blink: Bool? = nil, color: String? = nil, shape: String? = nil,
+                blink: Bool? = nil, color: String? = nil, shape: String? = nil, icon: String? = nil,
                 previous: String? = nil, title: String? = nil, body: String? = nil,
                 host: String? = nil) {
         self.name = name
@@ -46,6 +48,7 @@ public struct ControlEventPayload: Codable, Sendable, Equatable {
         self.blink = blink
         self.color = color
         self.shape = shape
+        self.icon = icon
         self.previous = previous
         self.title = title
         self.body = body

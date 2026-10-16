@@ -135,6 +135,21 @@ final class AppStoreEventTests {
         #expect(batch.items.first?.payload.shape == "star")
     }
 
+    @Test func iconOnlyStatusChangeEmitsAnEventCarryingTheIcon() throws {
+        let library = WindowLibrary(directory: directory, controlEventRing: ControlEventRing(runID: run))
+        let store = try #require(library.activeStore)
+        let session = try #require(store.activeSession)
+        store.setAgentIndicator(AgentIndicator(status: .active), forSession: session.id)
+        let anchor = try eventBatch(library.readEvents(ControlEventReadOptions(cursor: nil, kinds: nil, limit: 100)))
+
+        store.setAgentIndicator(AgentIndicator(status: .active, icon: "/icons/agent.png"), forSession: session.id)
+
+        let batch = try eventBatch(library.readEvents(ControlEventReadOptions(
+            cursor: ControlEventCursor(run: anchor.run, after: anchor.next), kinds: [.status], limit: 100
+        )))
+        #expect(batch.items.map(\.payload.icon) == ["/icons/agent.png"])
+    }
+
     @Test func sameNormalizedStatusAndUnknownSessionDoNotEmit() throws {
         let library = WindowLibrary(directory: directory, controlEventRing: ControlEventRing(runID: run))
         let store = try #require(library.activeStore)

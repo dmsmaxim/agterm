@@ -213,6 +213,50 @@ struct ControlDispatcherSessionMetadataTests {
         ])
     }
 
+    @Test func sessionStatusForwardsAValidIcon() async {
+        let actions = MockControlActions()
+        let dispatcher = ControlDispatcher(actions: actions)
+
+        let response = await dispatcher.dispatch(ControlRequest(cmd: .sessionStatus, target: "session",
+                                                                args: ControlArgs(status: "active", icon: "/icons/agent.png")))
+
+        #expect(response == ControlResponse(ok: true))
+        #expect(actions.calls == [
+            .sessionStatus(target: "session", window: nil,
+                           ControlSessionStatusUpdate(status: .active, blink: nil, autoReset: nil,
+                                                      sound: nil, icon: .set("/icons/agent.png")))
+        ])
+    }
+
+    @Test func sessionStatusKeepsTheIconWhenOmittedAndClearsItOnNone() async {
+        let actions = MockControlActions()
+        let dispatcher = ControlDispatcher(actions: actions)
+
+        _ = await dispatcher.dispatch(ControlRequest(cmd: .sessionStatus, target: "session", args: ControlArgs(status: "active")))
+        _ = await dispatcher.dispatch(ControlRequest(cmd: .sessionStatus, target: "session",
+                                                     args: ControlArgs(status: "active", icon: "none")))
+
+        #expect(actions.calls == [
+            .sessionStatus(target: "session", window: nil,
+                           ControlSessionStatusUpdate(status: .active, blink: nil, autoReset: nil, sound: nil, icon: .keep)),
+            .sessionStatus(target: "session", window: nil,
+                           ControlSessionStatusUpdate(status: .active, blink: nil, autoReset: nil, sound: nil, icon: .clear))
+        ])
+    }
+
+    @Test(arguments: ["", "icons/agent.png", "/icons/agent.gif", "/icons/agent\u{1b}.png"])
+    func sessionStatusRejectsAnInvalidIconWithoutMutating(_ icon: String) async {
+        let actions = MockControlActions()
+        let dispatcher = ControlDispatcher(actions: actions)
+
+        let response = await dispatcher.dispatch(ControlRequest(cmd: .sessionStatus, target: "session",
+                                                                args: ControlArgs(status: "active", icon: icon)))
+
+        #expect(response == ControlResponse(ok: false,
+                                            error: "invalid icon (expected none or an absolute .png, .jpg, .jpeg, .pdf or .svg path)"))
+        #expect(actions.calls.isEmpty)
+    }
+
     @Test func sessionStatusRejectsInvalidShapeWithoutMutating() async {
         let actions = MockControlActions()
         let dispatcher = ControlDispatcher(actions: actions)

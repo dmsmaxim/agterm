@@ -195,6 +195,9 @@ public struct ControlArgs: Codable, Sendable, Equatable {
     /// (`circle|square|triangle|diamond|capsule|star`), dispatcher-validated. Rides the ephemeral indicator,
     /// lasting until the next `session.status` without a shape; nil = the Settings shape, else a circle.
     public var shape: String?
+    /// The row icon for `session.status`: an absolute image path or `none` (`StatusIconChange`); nil keeps
+    /// the icon already set.
+    public var icon: String?
     /// The `background-image-opacity` for `session.background` (image + text), 0...1; nil = ghostty's 1.0.
     public var opacity: Double?
     /// The `background-image-fit` for `session.background` (`contain|cover|stretch|none`); nil = `contain`.
@@ -417,7 +420,7 @@ public struct ControlArgs: Codable, Sendable, Equatable {
                 width: Int? = nil, height: Int? = nil, sidebarWidth: Double? = nil, x: Int? = nil, y: Int? = nil, display: Int? = nil,
                 status: String? = nil, blink: Bool? = nil, autoReset: Bool? = nil, sound: String? = nil,
                 ratio: Double? = nil, ratioDelta: Double? = nil,
-                path: String? = nil, color: String? = nil, textColor: String? = nil, shape: String? = nil,
+                path: String? = nil, color: String? = nil, textColor: String? = nil, shape: String? = nil, icon: String? = nil,
                 opacity: Double? = nil, fit: String? = nil,
                 position: String? = nil, repeats: Bool? = nil, all: Bool? = nil, lines: Int? = nil,
                 light: String? = nil, dark: String? = nil,
@@ -489,6 +492,7 @@ public struct ControlArgs: Codable, Sendable, Equatable {
         self.color = color
         self.textColor = textColor
         self.shape = shape
+        self.icon = icon
         self.opacity = opacity
         self.fit = fit
         self.position = position
