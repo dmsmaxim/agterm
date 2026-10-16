@@ -36,10 +36,10 @@ The event kinds and payloads are:
 
 - `status`: `name`, normalized `status` (`idle`|`active`|`blocked`|`completed`), `previous` (the
   status before the write, equal to `status` when only blink, pane, color or shape changed), a `blink`
-  boolean, and optional `pane`, `color` and `shape` (the last two being the per-call `--color`/`--shape`
-  overrides). An event fires whenever the whole indicator changes, not just the state name — so a
-  change to `blink`, `pane`, `color` or `shape` alone is a real event you can watch, while re-asserting
-  an identical indicator emits nothing. Clearing emits `idle`.
+  boolean, and optional `pane`, `color`, `shape` and `icon` (the last three being the per-call
+  `--color`/`--shape`/`--icon` overrides). An event fires whenever the whole indicator changes, not just
+  the state name — so a change to `blink`, `pane`, `color`, `shape` or `icon` alone is a real event you
+  can watch, while re-asserting an identical indicator emits nothing. Clearing emits `idle`.
 - `notify`: `name`, effective `title`, and `body`. It is emitted after target and foreground-focus
   suppression checks, including when desktop banners are disabled.
 - `session.created` / `session.closed`: session `name`, emitted when the session enters or leaves a
@@ -216,8 +216,9 @@ glyph-tint override — the `--color` value; omitted when idle or using the conf
 `statusShape` (the glyph silhouette override — the `--shape` value, one of
 `circle`|`square`|`triangle`|`diamond`|`capsule`|`star`; omitted when idle or using the configured shape.
 Like `statusColor` it reports the PER-CALL override only, so a shape picked in Settings reads back as
-absent), `statusChangedAt` (when the status was last SET, in epoch seconds — the same clock an event's
-`ts` carries, so the two compare directly; omitted before any set. It is stamped on every ACCEPTED
+absent), `statusIcon` (the `--icon` path as requested, whether or not the row draws it; kept while idle,
+omitted when unset), `statusChangedAt` (when the status was last SET, in epoch seconds — the same clock an
+event's `ts` carries, so the two compare directly; omitted before any set. It is stamped on every ACCEPTED
 `session status` — a call refused by the pane-precedence rule below stamps nothing — not only on a
 change of state, so a hook re-pushing `active` refreshes it and
 `now - statusChangedAt` reads as how long ago the status was last WRITTEN, including idle.
@@ -640,7 +641,7 @@ error keeps those names for compatibility.
   `0.05..0.95` and persisted, and the applied (clamped) fraction is printed (and returned as `result.ratio`
   under `--json`). Errors when the session has no split. Resizing a hidden split updates the stored
   fraction; it takes effect when the split is next shown.
-- `session status <idle|active|completed|blocked> [--blink] [--auto-reset] [--sound NAME] [--color #rrggbb] [--shape circle|square|triangle|diamond|capsule|star] [--pane left|right|scratch] [--pane-id TOKEN] [--target] [--window W]` —
+- `session status <idle|active|completed|blocked> [--blink] [--auto-reset] [--sound NAME] [--color #rrggbb] [--shape circle|square|triangle|diamond|capsule|star] [--icon PATH|none] [--pane left|right|scratch] [--pane-id TOKEN] [--target] [--window W]` —
   set the sidebar agent-status glyph. Every ACCEPTED call stamps the session node's
   `statusChangedAt`, including idle and one that re-pushes the same status, so a poller can read the last
   set time without keeping state of its own; a call refused by the pane-precedence rule
@@ -665,6 +666,15 @@ error keeps those names for compatibility.
   `statusColor`), and rides the `status` control event's `shape` payload field so an `events` consumer can
   explain a shape-only change.
   A `--shape` on `idle` is accepted and ignored, since an idle session draws no glyph.
+  `--icon PATH` replaces the session's terminal glyph in the sidebar, so a hook can show its agent's logo.
+  Unlike `--color` and `--shape` it is sticky: set it once when the agent starts, and later status sets
+  without it, keystroke clears and `--auto-reset` keep it while the agent works and waits; `--icon none`,
+  Clear Status or closing the pane drops it, so an agent's exit hook should send `idle --icon none`. It takes
+  a PNG, JPEG, PDF or SVG (any other extension errors), resolves a relative path against your directory
+  (a quoted `~` is not expanded), and draws only the image's alpha, tinted like the glyph it replaces, so
+  ship a transparent silhouette. A split, flagged or remote row keeps its own glyph, and a row attached
+  from another Mac never gets the origin's icon. When the row will not draw it — a missing file, one the
+  system cannot decode, or one of those rows — the status is still set and the reply says why.
   `--pane` (canonical `left`|`right`|`scratch`; role and position aliases above are also accepted) records
   which pane set the status. It has three effects: (1) keystroke-clear becomes pane-scoped — a status set
   from a background pane survives typing in a DIFFERENT pane (so a `right`- or `scratch`-tagged block is
@@ -2182,6 +2192,8 @@ restore; a `session restore --pane right` on a session with no split also return
 `window not open`
 (resize/move/`--window`), `unknown theme: <name>` (theme set), `unknown sound: <name>` (session status --sound),
 `invalid color (expected #rrggbb)` (session status --color),
+`invalid icon (expected none or an absolute .png, .jpg, .jpeg, .pdf or .svg path)` (session status --icon over the raw
+socket; the CLI says `icon must be none or a .png, .jpg, .jpeg, .pdf or .svg path without control characters`),
 `invalid shape: <value> (circle|square|triangle|diamond|capsule|star)` (session status --shape over the
 raw socket; the `agtermctl` CLI rejects the same value locally with
 `shape must be one of: circle, square, triangle, diamond, capsule, star`),

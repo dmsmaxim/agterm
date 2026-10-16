@@ -434,6 +434,10 @@ public struct ControlDispatcher {
                 }
                 shape = parsed
             }
+            guard let icon = StatusIconChange(request.args?.icon) else {
+                return ControlResponse(ok: false, error:
+                    "invalid icon (expected \(StatusIconChange.noneName) or an absolute \(AgentIndicator.iconTypesPhrase) path)")
+            }
             let pane: StatusPane?
             switch parsePane(request.args?.pane) {
             case .pane(let parsed): pane = parsed
@@ -442,7 +446,7 @@ public struct ControlDispatcher {
             let update = ControlSessionStatusUpdate(status: status, blink: request.args?.blink,
                                                     autoReset: request.args?.autoReset,
                                                     sound: request.args?.sound, color: request.args?.color,
-                                                    shape: shape,
+                                                    shape: shape, icon: icon,
                                                     pane: pane, paneID: request.args?.paneID)
             return await actions.setSessionStatus(request.target, window: request.args?.window, update: update)
         case .sessionRestore:

@@ -72,9 +72,16 @@ extension AppStore {
                 blink: indicator.blink,
                 color: indicator.color,
                 shape: indicator.shape?.rawValue,
+                icon: indicator.icon,
                 previous: previous.status.rawValue
             )
         )
+    }
+
+    /// Whether the session's row draws the plain terminal glyph, the only one a status icon replaces: split,
+    /// tree-mode flagged and remote rows keep the glyph that carries that state.
+    public func drawsPlainTerminalGlyph(_ session: Session) -> Bool {
+        !session.hasSplit && session.remoteHost == nil && !(sidebarMode == .tree && session.flagged)
     }
 
     /// The window's non-idle sessions across ALL workspaces, ignoring the focus/flagged sidebar filter

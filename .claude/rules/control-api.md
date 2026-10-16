@@ -971,7 +971,19 @@ side, and reads `lastAppliedIsDark` when bare. Refuse it outside XCUITest; provi
 ## Status, notifications, and flags
 
 - `session.status` accepts idle/active/completed/blocked, blink, auto-reset, optional sound, `#rrggbb`
-  color, fixed shape set, and pane. Build a fresh ephemeral indicator so omitted overrides clear.
+  color, fixed shape set, row icon, and pane. Build a fresh ephemeral indicator so omitted overrides clear,
+  except the icon.
+- The icon is an image path: `AgentIndicator.isValidIconPath` wants it absolute, control-free and PNG, JPEG,
+  PDF or SVG, so the CLI absolutizes it against its own cwd like an overlay page. A file the system cannot
+  decode falls back to the terminal glyph.
+- The icon names the agent, not its state, so it is sticky: a hook sets it once at agent start and the stock
+  hook lines, which never pass it, keep it (`StatusIconChange.keep`). Keystroke and auto-reset clears keep it
+  too (`AgentIndicator.cleared`). Only `--icon none` (`StatusIconChange.noneName`, the spelling
+  `HudSpinner.noneName` set), Clear Status and pane teardown drop it, so an agent with no exit hook leaves it
+  until one of those.
+- `statusIcon` reads back the requested path, drawn only where `AppStore.drawsPlainTerminalGlyph` holds and
+  the file decodes. The write is never refused for that: hooks discard the reply, so the reply's
+  `result.text` names why the row will not draw it instead.
 - Validate sound before mutation and target playback. `default`/`beep` beeps; named system/custom sounds
   use cached `NSSound`. Without per-call sound, entering blocked may play configured default once;
   repeated blocked does not. Explicit per-call wins via `AgentStatus.effectiveSound`.
@@ -987,8 +999,9 @@ side, and reads `lastAppliedIsDark` when bare. Refuse it outside XCUITest; provi
 - Validate color and shape before mutation. Shapes are circle, square, triangle, diamond, capsule, star;
   derive validation/help from `StatusShape.allCases`. Idle accepts but does not render shape.
   AppKit and SwiftUI resolve through shared color/symbol helpers.
-- `ControlEventPayload` and `EventFormatter.human` must include every override; human status prints color
-  and shape. Tree reports state, pane, true blink, per-call color, and per-call shape only while non-idle.
+- `ControlEventPayload` and `EventFormatter.human` must include every override; human status prints color,
+  shape and icon. Tree reports state, pane, true blink, per-call color and shape only while non-idle, and the
+  icon whenever it is set.
   It reports `statusChangedAt` whenever it exists, including idle.
 - `statusChangedAt` is `Session.statusChangedAt` as epoch seconds — a plain `Double`, since
   `ControlProtocol.swift` imports no Foundation. It shares the `ControlEvent.ts` clock so a poller can
@@ -1575,7 +1588,8 @@ side, and reads `lastAppliedIsDark` when bare. Refuse it outside XCUITest; provi
 - A mirrored status bypasses `applyControlStatus`: the blocked-owner rule already ran on the origin, and a
   second pass here would refuse a clear the origin accepted. The origin's pane travels as a stable pane
   identity and maps through `RemoteBinding`; one with no local counterpart maps to no pane, never to a
-  neighbour. A non-idle status written locally takes the row over until a LIVE status update arrives from
+  neighbour. The status icon does not travel, since its path names a file on the origin.
+  A non-idle status written locally takes the row over until a LIVE status update arrives from
   the origin, a same-value write included since the origin publishes those too. A snapshot does not end
   it: one arrives with every reconnect, so `applyRemoteSnapshotStatus` skips such a row, which also holds
   back an origin write made while the stream was down. A local clear leaves the row idle, and the next

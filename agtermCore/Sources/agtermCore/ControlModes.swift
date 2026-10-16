@@ -177,7 +177,7 @@ public struct ControlSessionCreateOptions: Equatable, Sendable {
 }
 
 /// Parsed `session.status` payload. Sound validation and playback stay host-side; the dispatcher
-/// hex-validates the per-call `#rrggbb` `color`, and both overrides thread onto the ephemeral
+/// hex-validates the per-call `#rrggbb` `color`, and every override threads onto the ephemeral
 /// `AgentIndicator`.
 public struct ControlSessionStatusUpdate: Equatable, Sendable {
     public let status: AgentStatus
@@ -188,6 +188,8 @@ public struct ControlSessionStatusUpdate: Equatable, Sendable {
     /// Per-call glyph silhouette; nil falls back to the Settings shape / the built-in plain circle. The
     /// dispatcher rejects an unknown raw value before any mutation.
     public let shape: StatusShape?
+    /// What the call does to the sticky row icon, parsed in the dispatcher.
+    public let icon: StatusIconChange
     /// Which pane set the status (`left`=main, `right`=split, `scratch`), nil when unspecified. Stamped onto
     /// the indicator so pane-scoped keystroke-clear and pane-aware navigation know which surface blocked.
     public let pane: StatusPane?
@@ -198,7 +200,7 @@ public struct ControlSessionStatusUpdate: Equatable, Sendable {
     public let paneID: String?
 
     public init(status: AgentStatus, blink: Bool?, autoReset: Bool?, sound: String?,
-                color: String? = nil, shape: StatusShape? = nil,
+                color: String? = nil, shape: StatusShape? = nil, icon: StatusIconChange = .keep,
                 pane: StatusPane? = nil, paneID: String? = nil) {
         self.status = status
         self.blink = blink
@@ -206,6 +208,7 @@ public struct ControlSessionStatusUpdate: Equatable, Sendable {
         self.sound = sound
         self.color = color
         self.shape = shape
+        self.icon = icon
         self.pane = pane
         self.paneID = paneID
     }

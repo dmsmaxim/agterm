@@ -116,8 +116,37 @@ public enum StatusShape: String, Codable, Sendable, CaseIterable {
     private static var validNames: [String] { allCases.map(\.rawValue) }
 }
 
-/// AgentIndicator is the per-session agent status value: state, blink, autoReset, per-call color and shape
-/// overrides, and the pane that set it. Ephemeral (never persisted) and set only via the control API.
+/// StatusIconChange is what one `session.status` call does to the sticky row icon: an omitted `--icon` keeps
+/// it, a path replaces it, and `none` clears it.
+public enum StatusIconChange: Equatable, Sendable {
+    case keep
+    case set(String)
+    case clear
+
+    /// The `--icon` value that clears; never a valid path, which must be absolute.
+    public static let noneName = "none"
+
+    /// Parses a raw `--icon` value, nil for one that is neither `noneName` nor a valid icon path.
+    public init?(_ raw: String?) {
+        switch raw {
+        case nil: self = .keep
+        case Self.noneName?: self = .clear
+        case let path? where AgentIndicator.isValidIconPath(path): self = .set(path)
+        default: return nil
+        }
+    }
+
+    public func applied(to current: String?) -> String? {
+        switch self {
+        case .keep: return current
+        case .set(let path): return path
+        case .clear: return nil
+        }
+    }
+}
+
+/// AgentIndicator is the per-session agent status value: state, blink, autoReset, per-call color, shape and
+/// icon overrides, and the pane that set it. Ephemeral (never persisted) and set only via the control API.
 public struct AgentIndicator: Equatable, Sendable {
     public var status: AgentStatus = .idle
     /// blink makes the visible glyph pulse for attention.
@@ -131,18 +160,47 @@ public struct AgentIndicator: Equatable, Sendable {
     /// shape, when set, overrides the Settings-configured silhouette for this glyph only, discarded like
     /// `color`. nil falls back to the Settings shape, else the default plain circle.
     public var shape: StatusShape?
+    /// icon, when set, is an image path replacing the row's plain terminal glyph. It names the agent, not the
+    /// state, so unlike `color` it is sticky (`StatusIconChange`) and survives `cleared`.
+    public var icon: String?
     /// statusPane records which pane set this status; nil is unspecified and treated as `.left` (main) by the
     /// clear logic.
     public var statusPane: StatusPane?
 
     public init(status: AgentStatus = .idle, blink: Bool = false, autoReset: Bool = false,
-                color: String? = nil, shape: StatusShape? = nil, statusPane: StatusPane? = nil) {
+                color: String? = nil, shape: StatusShape? = nil, icon: String? = nil, statusPane: StatusPane? = nil) {
         self.status = status
         self.blink = blink
         self.autoReset = autoReset
         self.color = color
         self.shape = shape
+        self.icon = icon
         self.statusPane = statusPane
+    }
+
+    /// cleared is the idle indicator an automatic clear leaves: keystroke and auto-reset clears keep the icon.
+    public var cleared: AgentIndicator { AgentIndicator(icon: icon) }
+
+    private static let iconExtensions = ["png", "jpg", "jpeg", "pdf", "svg"]
+
+    /// The accepted icon types as prose (".png, .jpg, .jpeg, .pdf or .svg") for both rejection messages.
+    public static var iconTypesPhrase: String {
+        let names = iconExtensions.map { ".\($0)" }
+        return names.dropLast().joined(separator: ", ") + " or " + names[names.count - 1]
+    }
+
+    /// The `session.status` reply note for an icon the row will not draw, nil when it will.
+    public static func iconNote(decodes: Bool, plainRow: Bool) -> String? {
+        if !decodes { return "icon not shown: the file is missing or is not an image" }
+        if !plainRow { return "icon not shown while the row draws its split, flagged or remote glyph" }
+        return nil
+    }
+
+    /// isValidIconPath accepts an absolute, control-free path to one of `iconExtensions`.
+    public static func isValidIconPath(_ path: String) -> Bool {
+        guard path.hasPrefix("/"), WatermarkConfig.isValidImagePath(path),
+              let name = path.split(separator: "/").last, let dot = name.lastIndex(of: ".") else { return false }
+        return iconExtensions.contains(name[name.index(after: dot)...].lowercased())
     }
 
     /// clearedBy: a keystroke from `pane` clears this indicator only when that pane owns the current status and

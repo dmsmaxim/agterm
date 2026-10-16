@@ -502,7 +502,9 @@ extension ControlServer: ControlActions {
     /// errors `unknown sound` leaving the status unchanged; empty counts as none, and with none given a
     /// TRANSITION into `blocked` plays the Settings "Blocked sound" (`blockedStatusSoundName`).
     /// `update.color` (`#rrggbb` glyph tint) and `update.shape` (silhouette) are dispatcher-validated and
-    /// ride the EPHEMERAL indicator, lasting only until the next `session.status` without them.
+    /// ride the EPHEMERAL indicator, lasting only until the next `session.status` without them. The row icon
+    /// is sticky: `update.icon` keeps, replaces or clears it, and one the row will not draw is still set and
+    /// named in `result.text`.
     /// `update.pane` (`StatusPane`, dispatcher-validated, nil = `left`/main) records the pane that set the
     /// status, driving the pane-scoped keystroke-clear and pane-aware reveal. Renders on every non-idle one.
     /// While a session is blocked, a write from ANOTHER pane that is neither `blocked` nor `idle` is refused
@@ -535,7 +537,9 @@ extension ControlServer: ControlActions {
         let resolvedPane = update.paneID.flatMap { session.paneRole(forToken: $0) } ?? update.pane
         let indicator = AgentIndicator(status: update.status, blink: update.blink ?? false,
                                        autoReset: update.autoReset ?? false,
-                                       color: update.color, shape: update.shape, statusPane: resolvedPane)
+                                       color: update.color, shape: update.shape,
+                                       icon: update.icon.applied(to: session.agentIndicator.icon),
+                                       statusPane: resolvedPane)
         // rejected writes must return before playback: no status change means no sound.
         if case .refused(let owner) = store.applyControlStatus(indicator, forSession: id) {
             return ControlResponse(ok: false, error: "blocked status owned by pane \(owner.rawValue) " +
@@ -548,7 +552,12 @@ extension ControlServer: ControlActions {
             // a configured default is best-effort and must not delay or reject the status update.
             Task { await statusSoundPlayer.play(name) }
         }
-        return ControlResponse(ok: true, result: ControlResult(id: id.uuidString))
+        var note: String?
+        if case .set(let path) = update.icon {
+            note = AgentIndicator.iconNote(decodes: StatusIconImage.image(atPath: path) != nil,
+                                           plainRow: store.drawsPlainTerminalGlyph(session))
+        }
+        return ControlResponse(ok: true, result: ControlResult(id: id.uuidString, text: note))
     }
 
     /// Pin (or unpin) the target pane's restore-command override — the per-pane shell line that wins over

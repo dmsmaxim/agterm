@@ -28,6 +28,24 @@ struct AppStoreStatusTests {
         #expect(stamp > now - 60 && stamp <= now)
     }
 
+    @Test func onlyAPlainLocalRowDrawsTheTerminalGlyph() throws {
+        let store = makeStore()
+        let ws = store.addWorkspace(name: "work")
+        let plain = try #require(store.addSession(toWorkspace: ws.id, cwd: "/plain"))
+        let split = try #require(store.addSession(toWorkspace: ws.id, cwd: "/split"))
+        let flagged = try #require(store.addSession(toWorkspace: ws.id, cwd: "/flagged"))
+        let remote = try #require(store.addSession(toWorkspace: ws.id, cwd: "/remote", remoteHost: "buildbox"))
+        store.toggleSplit(split.id)
+        flagged.flagged = true
+
+        #expect(store.drawsPlainTerminalGlyph(plain))
+        #expect(!store.drawsPlainTerminalGlyph(split))
+        #expect(!store.drawsPlainTerminalGlyph(flagged))
+        #expect(!store.drawsPlainTerminalGlyph(remote))
+        store.setSidebarMode(.flagged)
+        #expect(store.drawsPlainTerminalGlyph(flagged), "the flagged view draws no fill, so its rows are plain")
+    }
+
     @Test func controlTreeReportsStatusChangedAtWhenIdle() throws {
         let store = makeStore()
         let ws = store.addWorkspace(name: "work")

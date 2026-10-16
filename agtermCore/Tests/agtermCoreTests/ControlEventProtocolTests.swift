@@ -102,6 +102,15 @@ struct ControlEventProtocolTests {
         #expect(!plainJSON.contains("previous"), "a nil previous must be omitted from the payload; got \(plainJSON)")
     }
 
+    @Test func statusPayloadRoundTripsIconAndOmitsItWhenNil() throws {
+        let iconed = ControlEvent(seq: 1, ts: 1.5, kind: .status, window: "win", session: "sess",
+                                  payload: ControlEventPayload(status: "active", icon: "/icons/agent.png"))
+        #expect(try JSONDecoder().decode(ControlEvent.self, from: JSONEncoder().encode(iconed)) == iconed)
+
+        let plain = ControlEventPayload(status: "active")
+        #expect(!String(decoding: try JSONEncoder().encode(plain), as: UTF8.self).contains("icon"))
+    }
+
     @Test func hooksCommandsAndResultRoundTripOnTheWire() throws {
         for (command, raw) in [(Command.hooksReload, "hooks.reload"), (Command.hooksList, "hooks.list")] {
             let data = try JSONEncoder().encode(ControlRequest(cmd: command))

@@ -280,6 +280,8 @@ public struct ControlSessionNode: Codable, Sendable, Equatable {
     /// the Settings shape / the default plain circle. The read side of `session.status --shape` — the
     /// PER-CALL override only, exactly like `statusColor`.
     public let statusShape: String?
+    /// The per-call row icon path; nil/omitted when idle or unset. The read side of `session.status --icon`.
+    public let statusIcon: String?
     /// When the status was last set, idle and repeated values included, as epoch seconds on the
     /// `ControlEvent.ts` clock. Omitted before any set; never persisted.
     public let statusChangedAt: Double?
@@ -348,7 +350,7 @@ public struct ControlSessionNode: Codable, Sendable, Equatable {
                 foregroundShell: String? = nil, splitForegroundShell: String? = nil,
                 restoreCommand: String? = nil, splitRestoreCommand: String? = nil, status: String? = nil,
                 statusPane: String? = nil, statusBlink: Bool? = nil, statusColor: String? = nil,
-                statusShape: String? = nil, statusChangedAt: Double? = nil,
+                statusShape: String? = nil, statusIcon: String? = nil, statusChangedAt: Double? = nil,
                 background: BackgroundWatermark? = nil, paneBackgrounds: PaneBackgrounds? = nil, unseen: Int? = nil,
                 fontSize: Double? = nil, splitFontSize: Double? = nil, scratchFontSize: Double? = nil,
                 surfaces: [ControlSurfaceNode]? = nil, realized: Bool? = nil,
@@ -388,6 +390,7 @@ public struct ControlSessionNode: Codable, Sendable, Equatable {
         self.statusBlink = statusBlink
         self.statusColor = statusColor
         self.statusShape = statusShape
+        self.statusIcon = statusIcon
         self.statusChangedAt = statusChangedAt
         self.background = background
         self.paneBackgrounds = paneBackgrounds
